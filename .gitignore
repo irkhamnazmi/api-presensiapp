@@ -1,8 +1,0 @@
-.env
-private-key.pem
-encoded.txt
-node_modules
-
-./utils/client_secret_2_1044572685093-btkmg6ejp2kv93m50ek4f2n0op7barr7.apps.googleusercontent.com.json
-./utils/gen-lang-client-0504734929-877454d63374.json
-./utils/credentials.json
