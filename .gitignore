@@ -1,3 +1,4 @@
 .env
 private-key.pem
 encoded.txt
+node_modules
