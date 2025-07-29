@@ -76,6 +76,20 @@ app.get('/api/students/:id', async (req, res) => {
   res.status(404).json({ success: false });
 });
 
+app.get('/api/students', async (req, res) => {
+  const query = req.query.query?.toLowerCase() || "";
+
+  const result = await loadSheets();
+  const students = result.sheets.students;
+
+  // Filter berdasarkan nama atau nisn yang mengandung query
+  const filtered = students.filter(s =>
+    s.nama?.toLowerCase().includes(query) || s.nisn?.includes(query)
+  );
+
+  res.json(filtered);
+});
+
 app.post('/api/students', async (req, res) => {
   const result = await loadSheets();
   const sheets = result.sheets;
@@ -136,6 +150,60 @@ app.post('/api/presences', async (req, res) => {
   const saveResult = await saveSheet('presences', sheets.presences);
   res.json({ success: true, data: newPresence, saved: saveResult });
 });
+
+app.get('/api/presences/summary-by-student', async (req, res) => {
+  const result = await loadSheets();
+  const { presences = [], students = [] } = result.sheets;
+
+  // Gabungkan presence dengan data student
+  const combined = presences.map(p => {
+    const student = students.find(s => s.id === p.student_id) || {};
+    return {
+      ...p,
+      student: {
+        id: student.id,
+        nisn: student.nisn,
+        name: student.name,
+        class: student.class,
+        birth_place: student.birth_place,
+        birth_date: student.birth_date,
+        phone_number: student.phone_number,
+      }
+    };
+  });
+
+  // Group by student ID + hitung status
+  const grouped = combined.reduce((acc, presence) => {
+    const studentId = presence.student?.id || 'unknown';
+    if (!acc[studentId]) {
+      acc[studentId] = {
+        student: presence.student,
+        presences: [],
+        summary: {
+          present: 0,
+          permission: 0,
+          sick: 0,
+          absent: 0,
+        }
+      };
+    }
+
+    acc[studentId].presences.push(presence);
+
+    // Hitung berdasarkan status
+    const status = (presence.status || '').toLowerCase();
+    if (status === 'masuk') acc[studentId].summary.present++;
+    else if (status === 'izin') acc[studentId].summary.permission++;
+    else if (status === 'sakit') acc[studentId].summary.sick++;
+    else if (status === 'alpa') acc[studentId].summary.absent++;
+    else acc[studentId].summary.lainnya++;
+
+    return acc;
+  }, {});
+
+  res.json(grouped);
+});
+
 
 app.delete('/api/presences/:id', async (req, res) => {
   const result = await loadSheets();
